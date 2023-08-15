@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:wordflutter/API/SelectWordApi.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:wordflutter/_model/select_word_model.dart';
 
 import 'dart:async';
 
 import 'package:wordflutter/_model/word_model.dart';
-import 'package:wordflutter/screen/result_screen.dart';
 import 'package:wordflutter/screen/test_screen.dart';
+
+import 'home_screen.dart';
 
 class LearningScreen extends StatefulWidget {
   String wordLevel = '';
@@ -25,21 +27,22 @@ class _LearningScreen extends State<LearningScreen> {
 
   late Future<List<WordModel>> wordList;
   bool _autoPlay = true;
-  var listCount = 0;
+  var _listCount = 0;
   var wordCount = 0;
   double _progressValue = 0.0;
 
-
   void _updateProgress(int index, int size, List<WordModel> list) {
-    if( listCount < size){
-      listCount += 1;
+    _listCount += 1;
+    if (_listCount < size) {
       setState(() {
-        _progressValue += (100 / size) * 0.01;
+        _progressValue +=
+            double.parse(((100 / size) * 0.01).toStringAsFixed(2));
         if (_progressValue >= 1.0) {
           _progressValue = 0.0;
         }
       });
-    }else {
+    } else if (_listCount >= size){
+      List<selectWord> _wordSelect = [];
       _autoPlay = false;
       Navigator.push(
         context,
@@ -48,7 +51,8 @@ class _LearningScreen extends State<LearningScreen> {
                   wordLevel: widget.wordLevel,
                   selectTime: widget.selectTime,
                   wordList: list,
-                  screenCount:0,
+                  screenCount: 0,
+                  wordSelect: _wordSelect,
                 )),
       );
     }
@@ -58,9 +62,22 @@ class _LearningScreen extends State<LearningScreen> {
   void initState() {
     super.initState();
     wordList = SelectWordApi().getWrodList(widget.wordLevel);
+    if (wordList != null) {
+      wordList.then((value) {
+        _progressValue +=
+            double.parse(((100 / value.length) * 0.01).toStringAsFixed(1));
+      });
+    }
   }
 
-
+  @override
+  void dispose() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,8 +85,15 @@ class _LearningScreen extends State<LearningScreen> {
       home: Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.orange,
-          title: Text(widget.wordLevel + " JLPT単語学習"),
+          title: Text("${widget.wordLevel} JLPT単語学習"),
           centerTitle: true,
+          actions: [
+            IconButton(
+                onPressed: () {
+                  dispose();
+                },
+                icon: const Icon(Icons.home))
+          ],
         ),
         body: FutureBuilder<List<WordModel>>(
           future: wordList,
@@ -81,34 +105,15 @@ class _LearningScreen extends State<LearningScreen> {
                   height: height,
                   viewportFraction: 1.0,
                   enlargeCenterPage: false,
-                  autoPlay: true,
+                  autoPlay: _autoPlay,
                   autoPlayInterval: Duration(seconds: widget.selectTime),
                   onPageChanged: (index, reason) => {
-                    _updateProgress(index, snapshot.data!.length, snapshot.data!),
+                    _updateProgress(
+                        index, snapshot.data!.length, snapshot.data!),
                   },
                 ),
                 items: snapshot.data!
-                    .map((item) => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              child:  CircularPercentIndicator(
-                                radius: 130.0,
-                                animation: _autoPlay,
-                                lineWidth: 15.0,
-                                percent: _progressValue,
-                                animateFromLastPercent: true,
-                                center: Text(
-                                  "${item.word_kanji}\n${item.word_hurigana}",
-                                  style:
-                                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0),
-                                ),
-                                circularStrokeCap: CircularStrokeCap.round,
-                                progressColor: Colors.purple,
-                              ),
-                            ),
-                          ],
-                        ))
+                    .map((item) => learningTemplate(item))
                     .toList(),
               );
             } else if (snapshot.hasError) {
@@ -118,6 +123,30 @@ class _LearningScreen extends State<LearningScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget learningTemplate(WordModel item) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          child: CircularPercentIndicator(
+            radius: 130.0,
+            animation: _autoPlay,
+            lineWidth: 15.0,
+            percent: _progressValue,
+            animateFromLastPercent: true,
+            center: Text(
+              "${item.word_kanji}\n${item.word_hurigana}",
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0),
+            ),
+            circularStrokeCap: CircularStrokeCap.round,
+            progressColor: Colors.purple,
+          ),
+        ),
+      ],
     );
   }
 }

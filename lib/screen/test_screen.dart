@@ -5,20 +5,25 @@ import 'dart:io';
 
 import 'package:wordflutter/_model/word_model.dart';
 import 'package:wordflutter/screen/result_screen.dart';
+import 'package:wordflutter/_model/select_word_model.dart';
+
+import 'home_screen.dart';
 
 class WordTestScreen extends StatefulWidget {
   String wordLevel = '';
   int selectTime = 0;
-  List<WordModel> wordList;
   int screenCount;
+  List<WordModel> wordList;
+  List<selectWord> wordSelect = [];
 
-  WordTestScreen(
-      {Key? key,
-      required this.wordLevel,
-      required this.selectTime,
-      required this.wordList,
-      required this.screenCount})
-      : super(key: key);
+  WordTestScreen({
+    Key? key,
+    required this.wordLevel,
+    required this.selectTime,
+    required this.screenCount,
+    required this.wordList,
+    required this.wordSelect,
+  }) : super(key: key);
 
   @override
   State<WordTestScreen> createState() => _WordTestScreen();
@@ -27,46 +32,33 @@ class WordTestScreen extends StatefulWidget {
 class _WordTestScreen extends State<WordTestScreen> {
   var listCount = 0;
   var wordCount = 0;
-
+  var _screenNum = 0;
   var _color = Colors.lightBlueAccent;
+
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
-
-    Timer(Duration(seconds: widget.selectTime), () {
-      sleep(const Duration(seconds: 1));
-      if (widget.screenCount < widget.wordList.length) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => WordTestScreen(
-                    wordLevel: widget.wordLevel,
-                    selectTime: widget.selectTime,
-                    wordList: widget.wordList,
-                    screenCount: widget.screenCount += 1,
-                  )),
-        );
-      } else if(widget.screenCount == widget.wordList.length){
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => resultScreen(
-                wordLevel: widget.wordLevel,
-                selectTime: widget.selectTime,
-                wordList: widget.wordList,
-                screenCount: widget.screenCount += 1,
-              )),
-        );
-      }
+    timer = Timer(Duration(seconds: widget.selectTime), () {
+      nextPage(0);
     });
   }
 
   @override
+  void dispose() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
+    );
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _screenNum = widget.screenCount + 1;
+
     List<WordModel> wordTestList = widget.wordList;
-    int wordAllCount = widget.wordList.length;
-    print("screenCount : " + widget.screenCount.toString());
     List<String> randomTest =
         randomShuffled(widget.wordList, widget.screenCount);
 
@@ -76,6 +68,13 @@ class _WordTestScreen extends State<WordTestScreen> {
         backgroundColor: Colors.orange,
         title: Text(widget.wordLevel + " JLPT単語学習"),
         centerTitle: true,
+        actions: [
+          IconButton(
+              onPressed: () {
+                dispose();
+              },
+              icon: const Icon(Icons.home))
+        ],
       ),
       body: Center(
         child: Column(
@@ -106,16 +105,13 @@ class _WordTestScreen extends State<WordTestScreen> {
           5.0,
         ),
         child: ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: _color),
+          style: ElevatedButton.styleFrom(
+              foregroundColor: Colors.black, backgroundColor: _color),
           onPressed: () {
             if (hiragana == word_hurigana) {
-              setState(() {
-                _color = Colors.greenAccent;
-              });
+              nextPage(1);
             } else {
-              setState(() {
-                _color = Colors.redAccent;
-              });
+              nextPage(0);
             }
           },
           child: Text(hiragana),
@@ -133,16 +129,38 @@ class _WordTestScreen extends State<WordTestScreen> {
     return wordShuffled;
   }
 
-  void nextPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => WordTestScreen(
-            wordLevel: widget.wordLevel,
-            selectTime: widget.selectTime,
-            wordList: widget.wordList,
-            screenCount: widget.screenCount += 1,
-          )),
-    );
+  void nextPage(int _select) {
+    if (_screenNum >= widget.wordList.length) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => resultScreen(
+                  wordLevel: widget.wordLevel,
+                  selectTime: widget.selectTime,
+                  wordSelect: wordSelectadd(_select),
+                )),
+      );
+      timer?.cancel();
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => WordTestScreen(
+                wordLevel: widget.wordLevel,
+                selectTime: widget.selectTime,
+                wordList: widget.wordList,
+                wordSelect: wordSelectadd(_select),
+                screenCount: widget.screenCount += 1)),
+      );
+      timer?.cancel();
+    }
+  }
+
+  List<selectWord> wordSelectadd(int _select) {
+    widget.wordSelect.add(selectWord(
+        word_kanji: widget.wordList[widget.screenCount].word_kanji,
+        word_hurigana: widget.wordList[widget.screenCount].word_hurigana,
+        word_select: _select));
+    return widget.wordSelect;
   }
 }

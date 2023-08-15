@@ -6,7 +6,6 @@ import 'package:logger/logger.dart';
 import 'package:wordflutter/_model/word_model.dart';
 
 class SelectWordApi extends ChangeNotifier {
-  final _wordLevel = 'N1';
   final _url = Uri.parse('http://10.0.2.2:8080/wordAPI');
   var logger = Logger();
 
@@ -14,7 +13,7 @@ class SelectWordApi extends ChangeNotifier {
 
 
   Future<List<WordModel>> getWrodList(String wordLevel) async{
-    Uri _getWordUrl = Uri.parse('$_url/word?wordLevel=$_wordLevel');
+    Uri _getWordUrl = Uri.parse('$_url/word?wordLevel=$wordLevel');
     http.Response _response = await http.get(_getWordUrl);
 
     if(_response.statusCode == 200){
